@@ -250,8 +250,3 @@ keycloak = new Keycloak({
 - Or logout and login again
 
 ---
-
-## 📄 License
-
-MIT
-
