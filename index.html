@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keycloak Sample App</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <svg viewBox="0 0 100 100" fill="none">
+                    <circle cx="50" cy="50" r="45" stroke="#00d4aa" stroke-width="3"/>
+                    <path d="M35 50 L45 60 L65 40" stroke="#00d4aa" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <h1>Keycloak Demo</h1>
+            </div>
+            <p class="subtitle">OpenID Connect Authentication Flow</p>
+        </header>
+
+        <!-- Auth Status Card -->
+        <div class="card">
+            <h2>
+                🔐 Authentication Status
+                <span id="status-badge" class="status-indicator logged-out">
+                    <span class="dot"></span>
+                    <span id="status-text">Not Authenticated</span>
+                </span>
+            </h2>
+
+            <!-- Logged Out View -->
+            <div id="logged-out-view">
+                <p class="description">
+                    Click the button below to authenticate with Keycloak using OpenID Connect.
+                </p>
+                <div class="actions">
+                    <button id="login-btn" class="btn btn-primary">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                            <polyline points="10 17 15 12 10 7"/>
+                            <line x1="15" y1="12" x2="3" y2="12"/>
+                        </svg>
+                        Login with Keycloak
+                    </button>
+                </div>
+
+                <div class="flow-diagram">
+                    <h3>🔄 What happens when you click Login:</h3>
+                    <div class="flow-steps">
+                        <span class="flow-step">1. Redirect to Keycloak</span>
+                        <span class="flow-arrow">→</span>
+                        <span class="flow-step">2. Enter Credentials</span>
+                        <span class="flow-arrow">→</span>
+                        <span class="flow-step">3. Get Auth Code</span>
+                        <span class="flow-arrow">→</span>
+                        <span class="flow-step">4. Exchange for Tokens</span>
+                        <span class="flow-arrow">→</span>
+                        <span class="flow-step">5. Access Granted! ✓</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logged In View -->
+            <div id="logged-in-view" class="hidden">
+                <div class="user-header">
+                    <div class="avatar" id="user-avatar">?</div>
+                    <div>
+                        <h3 id="user-name">-</h3>
+                        <p id="user-email">-</p>
+                    </div>
+                </div>
+
+                <div class="user-info">
+                    <div class="info-row">
+                        <span class="info-label">Username</span>
+                        <span class="info-value" id="info-username">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">User ID (sub)</span>
+                        <span class="info-value" id="info-sub">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Realm</span>
+                        <span class="info-value" id="info-realm">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Token Expires</span>
+                        <span class="info-value" id="info-expires">-</span>
+                    </div>
+                </div>
+
+                <div class="actions mt-24">
+                    <button id="show-token-btn" class="btn btn-secondary">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
+                        View Token
+                    </button>
+                    <button id="refresh-token-btn" class="btn btn-secondary">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"/>
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                        </svg>
+                        Refresh Token
+                    </button>
+                    <button id="logout-btn" class="btn btn-danger">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                            <polyline points="16 17 21 12 16 7"/>
+                            <line x1="21" y1="12" x2="9" y2="12"/>
+                        </svg>
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Token Display Card -->
+        <div id="token-card" class="card hidden">
+            <h2>🎟️ Access Token (JWT)</h2>
+            <p class="card-description">
+                This is the decoded JWT token containing your identity claims:
+            </p>
+            <div class="token-display">
+                <pre id="token-content">-</pre>
+            </div>
+        </div>
+
+        <!-- API Call Demo Card -->
+        <div id="api-card" class="card hidden">
+            <h2>🌐 Protected API Call</h2>
+            <p class="card-description">
+                Use your access token to call Keycloak's UserInfo endpoint:
+            </p>
+            <div class="actions">
+                <button id="userinfo-btn" class="btn btn-secondary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="16" x2="12" y2="12"/>
+                        <line x1="12" y1="8" x2="12.01" y2="8"/>
+                    </svg>
+                    Call UserInfo Endpoint
+                </button>
+            </div>
+            <div id="api-response" class="token-display hidden">
+                <pre id="api-content">-</pre>
+            </div>
+        </div>
+
+        <footer>
+            <p>
+                Powered by <a href="https://www.keycloak.org/" target="_blank">Keycloak</a> | 
+                Realm: <strong>demo</strong> | 
+                Client: <strong>sample-app</strong>
+            </p>
+        </footer>
+    </div>
+
+    <!-- Keycloak JS Adapter (ES Module) -->
+    <script type="module">
+        import Keycloak from './keycloak.js';
+        
+        // Global state
+        let keycloak = null;
+        let isInitialized = false;
+
+        // DOM Elements
+        const statusBadge = document.getElementById('status-badge');
+        const statusText = document.getElementById('status-text');
+        const loggedOutView = document.getElementById('logged-out-view');
+        const loggedInView = document.getElementById('logged-in-view');
+        const tokenCard = document.getElementById('token-card');
+        const apiCard = document.getElementById('api-card');
+        const loginBtn = document.getElementById('login-btn');
+
+        // Show loading state
+        if (loginBtn) {
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = `
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinning">
+                    <circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="12"/>
+                </svg>
+                Initializing...
+            `;
+        }
+
+        // Check if Keycloak JS loaded
+        if (typeof Keycloak === 'undefined') {
+            console.error('Keycloak JS adapter not loaded! Is Keycloak running at http://localhost:8080?');
+            statusText.textContent = 'Error: Keycloak not available';
+            if (loginBtn) {
+                loginBtn.innerHTML = '❌ Keycloak unavailable';
+            }
+        } else {
+            // Initialize Keycloak
+            keycloak = new Keycloak({
+                url: 'http://localhost:8080',
+                realm: 'demo',
+                clientId: 'sample-app'
+            });
+
+            // Initialize on page load
+            keycloak.init({
+                onLoad: 'check-sso',
+                silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
+                pkceMethod: 'S256'
+            }).then(authenticated => {
+                console.log('Keycloak initialized! Authenticated:', authenticated);
+                isInitialized = true;
+                updateUI(authenticated);
+                
+                // Enable login button
+                if (loginBtn && !authenticated) {
+                    loginBtn.disabled = false;
+                    loginBtn.innerHTML = `
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                            <polyline points="10 17 15 12 10 7"/>
+                            <line x1="15" y1="12" x2="3" y2="12"/>
+                        </svg>
+                        Login with Keycloak
+                    `;
+                }
+            }).catch(error => {
+                console.error('Keycloak init error:', error);
+                statusText.textContent = 'Init Error';
+                if (loginBtn) {
+                    loginBtn.disabled = false;
+                    loginBtn.innerHTML = '🔄 Retry Login';
+                }
+            });
+
+            // Token refresh
+            keycloak.onTokenExpired = () => {
+                console.log('Token expired, refreshing...');
+                keycloak.updateToken(30).then(refreshed => {
+                    if (refreshed) {
+                        console.log('Token refreshed');
+                        updateUI(true);
+                    }
+                });
+            };
+        }
+
+        function updateUI(authenticated) {
+            if (authenticated) {
+                statusBadge.className = 'status-indicator logged-in';
+                statusText.textContent = 'Authenticated';
+                loggedOutView.classList.add('hidden');
+                loggedInView.classList.remove('hidden');
+                apiCard.classList.remove('hidden');
+
+                // Parse token
+                const token = keycloak.tokenParsed;
+                
+                // Update user info
+                const name = token.name || token.preferred_username || 'User';
+                document.getElementById('user-avatar').textContent = name.charAt(0).toUpperCase();
+                document.getElementById('user-name').textContent = name;
+                document.getElementById('user-email').textContent = token.email || 'No email';
+                document.getElementById('info-username').textContent = token.preferred_username || '-';
+                document.getElementById('info-sub').textContent = token.sub || '-';
+                document.getElementById('info-realm').textContent = token.iss?.split('/').pop() || 'demo';
+                
+                // Calculate expiry
+                const expiry = new Date(token.exp * 1000);
+                document.getElementById('info-expires').textContent = expiry.toLocaleTimeString();
+
+            } else {
+                statusBadge.className = 'status-indicator logged-out';
+                statusText.textContent = 'Not Authenticated';
+                loggedOutView.classList.remove('hidden');
+                loggedInView.classList.add('hidden');
+                tokenCard.classList.add('hidden');
+                apiCard.classList.add('hidden');
+            }
+        }
+
+        function login() {
+            if (!keycloak) {
+                alert('Keycloak is not loaded. Make sure Keycloak is running at http://localhost:8080');
+                return;
+            }
+            if (!isInitialized) {
+                alert('Please wait for Keycloak to initialize...');
+                return;
+            }
+            keycloak.login();
+        }
+
+        function logout() {
+            if (!keycloak) return;
+            keycloak.logout({
+                redirectUri: window.location.origin
+            });
+        }
+
+        function showToken() {
+            if (!keycloak) return;
+            tokenCard.classList.toggle('hidden');
+            if (!tokenCard.classList.contains('hidden')) {
+                const tokenContent = JSON.stringify(keycloak.tokenParsed, null, 2);
+                document.getElementById('token-content').textContent = tokenContent;
+            }
+        }
+
+        function refreshToken() {
+            if (!keycloak) return;
+            keycloak.updateToken(-1).then(refreshed => {
+                if (refreshed) {
+                    alert('Token refreshed successfully!');
+                    updateUI(true);
+                }
+            }).catch(() => {
+                alert('Failed to refresh token');
+            });
+        }
+
+        async function callUserInfo() {
+            if (!keycloak) return;
+            try {
+                const response = await fetch(`${keycloak.authServerUrl}/realms/${keycloak.realm}/protocol/openid-connect/userinfo`, {
+                    headers: {
+                        'Authorization': `Bearer ${keycloak.token}`
+                    }
+                });
+                const data = await response.json();
+                document.getElementById('api-response').classList.remove('hidden');
+                document.getElementById('api-content').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('api-response').classList.remove('hidden');
+                document.getElementById('api-content').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        // Attach event listeners to buttons
+        document.getElementById('login-btn')?.addEventListener('click', login);
+        document.getElementById('logout-btn')?.addEventListener('click', logout);
+        document.getElementById('show-token-btn')?.addEventListener('click', showToken);
+        document.getElementById('refresh-token-btn')?.addEventListener('click', refreshToken);
+        document.getElementById('userinfo-btn')?.addEventListener('click', callUserInfo);
+    </script>
+</body>
+</html>
+

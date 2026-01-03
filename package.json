@@ -1,0 +1,11 @@
+{
+  "name": "keycloak-sample-app",
+  "version": "1.0.0",
+  "description": "Sample app demonstrating Keycloak OIDC authentication",
+  "scripts": {
+    "start": "npx serve -l 3000"
+  },
+  "keywords": ["keycloak", "oidc", "authentication"],
+  "license": "MIT"
+}
+
